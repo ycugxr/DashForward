@@ -125,6 +125,11 @@ namespace QFramework.Example
 
         void Start()
         {
+            FSM.OnStateChanged((previousState, nextState) =>
+            {
+                Debug.Log($""{previousState}=>{nextState}"");
+            });
+
             FSM.State(States.A)
                 .OnCondition(()=>FSM.CurrentStateId == States.B)
                 .OnEnter(() =>
@@ -149,7 +154,7 @@ namespace QFramework.Example
                 })
                 .OnExit(() =>
                 {
-                    Debug.Log(""Enter B"");
+                    Debug.Log(""Exit A"");
                 });
 
                 FSM.State(States.B)
@@ -188,6 +193,11 @@ namespace QFramework.Example
         }
     }
 }
+// Enter A
+// Exit A
+// A=>B
+// Enter B
+
 // class state
 using UnityEngine;
 
@@ -306,6 +316,8 @@ namespace QFramework.Example
         public IState CurrentState => mCurrentState;
         public T CurrentStateId => mCurrentStateId;
         public T PreviousStateId { get; private set; }
+
+        public long FrameCountOfCurrentState = 1;
         
         public void ChangeState(T t)
         {
@@ -319,9 +331,18 @@ namespace QFramework.Example
                     PreviousStateId = mCurrentStateId;
                     mCurrentState = state;
                     mCurrentStateId = t;
+                    mOnStateChanged?.Invoke(PreviousStateId, CurrentStateId);
+                    FrameCountOfCurrentState = 1;
                     mCurrentState.Enter();
                 }
             }
+        }
+
+        private Action<T, T> mOnStateChanged = (_, __) => { };
+        
+        public void OnStateChanged(Action<T, T> onStateChanged)
+        {
+            mOnStateChanged += onStateChanged;
         }
 
         public void StartState(T t)
@@ -331,6 +352,7 @@ namespace QFramework.Example
                 PreviousStateId = t;
                 mCurrentState = state;
                 mCurrentStateId = t;
+                FrameCountOfCurrentState = 0;
                 state.Enter();
             }
         }
@@ -343,6 +365,7 @@ namespace QFramework.Example
         public void Update()
         {
             mCurrentState?.Update();
+            FrameCountOfCurrentState++;
         }
 
         public void OnGUI()
